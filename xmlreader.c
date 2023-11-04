@@ -419,7 +419,8 @@ static int xmlreader_get_attribute(lua_State *L) {
   char *attr;
 
   if (lua_type(L, 2) == LUA_TNUMBER) {
-    int n = luaL_checkint(L, 2);
+		luaL_checkany(L, 2);
+		int n = lua_tointeger(L, 2);
     attr = (char*)xmlTextReaderGetAttributeNo(xr, n);
   } else {
     const xmlChar *name = (xmlChar*)luaL_checkstring(L, 2);
@@ -479,7 +480,8 @@ static int xmlreader_move_to_attribute(lua_State *L)
   int ret;
 
   if (lua_type(L, 2) == LUA_TNUMBER) {
-    int n = luaL_checkint(L, 2);
+		luaL_checkany(L, 2);
+		int n = lua_tointeger(L, 2);
     ret = xmlTextReaderMoveToAttributeNo(xr, n);
   } else {
     const xmlChar *name = (xmlChar*)luaL_checkstring(L, 2);
@@ -539,7 +541,7 @@ static int xmlreader_encoding(lua_State *L) {
 
 /*** extensions ***/
 
-/* for now, don't implement xmlTextReaderSetParserProp, it's better done in 
+/* for now, don't implement xmlTextReaderSetParserProp, it's better done in
  * the constructor */
 
 static int xmlreader_get_parser_property(lua_State *L) {
@@ -591,7 +593,7 @@ static int xmlreader_next_node(lua_State *L) {
   int ret = xmlTextReaderNext(xr);
   BOOL_OR_ERROR(L, ret);
 }
- 
+
 
 /* reader:is_valid() */
 static int xmlreader_is_valid(lua_State *L) {
@@ -642,12 +644,12 @@ static int xmlreader_bytes_consumed(lua_State *L) { xmlreader xr = check_xmlread
 
 static int parser_opt_table;
 
-/* assumes table of options at top of stack. Invalid option parameters have no  
+/* assumes table of options at top of stack. Invalid option parameters have no
  * effect
  * */
 static int get_parser_option(lua_State *L) {
   int i;
-  int len = lua_objlen(L, -1);
+	int len = lua_rawlen(L, -1);
   int opt = 0;
   if (len > 0) {
     lua_pushlightuserdata(L, &parser_opt_table);
@@ -687,8 +689,8 @@ static int xmlreader_from_file(lua_State *L) {
   return 1;
 }
 
-/* Differs from xmlReaderForMemory by using xmlParserInputBufferCreateMem, 
- * which copys the passed string ensuring that parsing is safe after the 
+/* Differs from xmlReaderForMemory by using xmlParserInputBufferCreateMem,
+ * which copys the passed string ensuring that parsing is safe after the
  * string is popped from lua's stack */
 
 xmlreader _xmlreader_from_string(const char *buffer, int size, const char *URL, const char *encoding, int options) {
@@ -719,13 +721,13 @@ static int xmlreader_from_string(lua_State *L) {
     opt = get_parser_option(L);
   }
 
-  xmlreader xr = push_xmlreader(L, _xmlreader_from_string(str, lua_objlen(L, 1), url, enc, opt));
+  xmlreader xr = push_xmlreader(L, _xmlreader_from_string(str, lua_rawlen(L, -1), url, enc, opt));
 
   if (xr == NULL)
     lua_pushnil(L);
   /*
   else
-    xmlTextReaderSetStructuredErrorHandler(xr, xmlreader_error_handler, L); 
+    xmlTextReaderSetStructuredErrorHandler(xr, xmlreader_error_handler, L);
   */
 
   return 1;
@@ -834,14 +836,14 @@ int luaopen_xmlreader(lua_State *L) {
     lua_setfield(L, -2, parser_opts[i].key);
   }
   lua_rawset(L, LUA_REGISTRYINDEX);
-  
+
   luaL_newmetatable(L, LXMLREADER);
   lua_pushvalue(L, -1);
   lua_setfield(L, -2, "__index");
-  luaL_register(L, NULL, xmlreader_m);
+	luaL_setfuncs(L, xmlreader_m, 0);
 
   lua_newtable(L);
-  luaL_register(L, "xmlreader", xmlreader_f);
-  
+	luaL_setfuncs(L, xmlreader_f, 0);
+
   return 1;
 }
